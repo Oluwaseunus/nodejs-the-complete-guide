@@ -14,18 +14,19 @@ exports.getAddProduct = (req, res) => {
 exports.postAddProduct = (req, res, next) => {
   const { title, imageUrl, description, price } = req.body;
 
-  // Product.create({})
+  const newProduct = new Product(
+    title,
+    price,
+    imageUrl,
+    description,
+    null,
+    req.user._id
+  );
 
-  // this method exists because Sequelize creates "magic functions"
-  // based on the associations defined between our models.
-  // Product belongs to User so user can create products.
-  req.user
-    .createProduct({
-      title,
-      price,
-      imageUrl,
-      description,
-    })
+  console.log({ newProduct });
+
+  newProduct
+    .save()
     .then(() => {
       res.redirect("/admin/products");
     })
@@ -41,15 +42,8 @@ exports.getEditProduct = (req, res, next) => {
 
   const { productId } = req.params;
 
-  // Product.findByPk(productId);
-
-  req.user
-    .getProducts({
-      where: {
-        id: productId,
-      },
-    })
-    .then(([product]) => {
+  Product.findById(productId)
+    .then((product) => {
       res.render("admin/edit-product", {
         pageTitle: "Edit Product",
         path: "/admin/edit-product",
@@ -68,25 +62,15 @@ exports.postEditProduct = (req, res, next) => {
 
   const { price, title, imageUrl, description } = req.body;
 
-  Product.findByPk(productId)
-    .then((product) => {
-      /* return product
-        .update({
-          title,
-          price,
-          imageUrl,
-          description,
-        })
-        .then(() => {
-          res.redirect("/admin/products");
-        }); */
+  const product = new Product(title, price, imageUrl, description, productId);
 
-      product.title = title;
-      product.price = price;
-      product.imageUrl = imageUrl;
-      product.description = description;
+  // product
+  //   .update(productId)
 
-      return product.save();
+  product
+    .save()
+    .then(() => {
+      res.redirect("/admin/products");
     })
     .catch((err) => console.log({ err }));
 };
@@ -94,10 +78,7 @@ exports.postEditProduct = (req, res, next) => {
 exports.postDeleteProduct = (req, res, next) => {
   const { productId } = req.body;
 
-  Product.findByPk(productId)
-    .then((product) => {
-      return product.destroy();
-    })
+  Product.deleteById(productId)
     .then(() => {
       res.redirect("/admin/products");
     })
@@ -105,8 +86,7 @@ exports.postDeleteProduct = (req, res, next) => {
 };
 
 exports.getProducts = (req, res, next) => {
-  req.user
-    .getProducts()
+  Product.fetchAll()
     .then((products) => {
       res.render("admin/products", {
         prods: products,
