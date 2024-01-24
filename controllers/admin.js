@@ -14,14 +14,14 @@ exports.getAddProduct = (req, res) => {
 exports.postAddProduct = (req, res, next) => {
   const { title, imageUrl, description, price } = req.body;
 
-  const newProduct = new Product(
+  const newProduct = new Product({
     title,
     price,
     imageUrl,
     description,
-    null,
-    req.user._id
-  );
+    // mongoose will pick the user id here because we defined user as a reference.
+    userId: req.user,
+  });
 
   console.log({ newProduct });
 
@@ -62,13 +62,15 @@ exports.postEditProduct = (req, res, next) => {
 
   const { price, title, imageUrl, description } = req.body;
 
-  const product = new Product(title, price, imageUrl, description, productId);
+  Product.findById(productId)
+    .then((product) => {
+      product.title = title;
+      product.price = price;
+      product.imageUrl = imageUrl;
+      product.description = description;
 
-  // product
-  //   .update(productId)
-
-  product
-    .save()
+      product.save();
+    })
     .then(() => {
       res.redirect("/admin/products");
     })
@@ -78,7 +80,7 @@ exports.postEditProduct = (req, res, next) => {
 exports.postDeleteProduct = (req, res, next) => {
   const { productId } = req.body;
 
-  Product.deleteById(productId)
+  Product.findByIdAndDelete(productId)
     .then(() => {
       res.redirect("/admin/products");
     })
@@ -86,13 +88,15 @@ exports.postDeleteProduct = (req, res, next) => {
 };
 
 exports.getProducts = (req, res, next) => {
-  Product.fetchAll()
-    .then((products) => {
+  Product.find()
+    // .select("title price -_id") https://mongoosejs.com/docs/api/query.html#Query.prototype.select()
+    // .populate("userId", "name") https://mongoosejs.com/docs/api/query.html#Query.prototype.populate()
+    .then((products) =>
       res.render("admin/products", {
         prods: products,
         pageTitle: "Admin Products",
         path: "/admin/products",
-      });
-    })
+      })
+    )
     .catch((err) => console.log({ err }));
 };
